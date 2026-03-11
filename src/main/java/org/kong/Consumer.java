@@ -2,22 +2,22 @@ package org.kong;
 
 public class Consumer {
 
-    private final MessageQueue queue;
+    private final LogReader logReader;
+    private long offset = 0;
 
-    public Consumer(MessageQueue queue) {
-        this.queue = queue;
+    public Consumer(String path) throws Exception {
+        this.logReader = new LogReader(path);
     }
 
-    public void start() {
-        new Thread(() -> {
-            while (true) {
-                try {
-                    Message msg = queue.poll();
-                    System.out.println(new String(msg.getBody()));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
+    public void poll() throws Exception {
+        while (true) {
+            String msg = logReader.read(offset);
+
+            if (msg != null) {
+                System.out.println("consume:" + msg);
+                offset += msg.getBytes().length + 1;
             }
-        }).start();
+            Thread.sleep(1000);
+        }
     }
 }
