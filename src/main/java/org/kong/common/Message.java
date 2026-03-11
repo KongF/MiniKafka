@@ -1,4 +1,4 @@
-package org.kong;
+package org.kong.common;
 
 public class Message {
     private final long offset;

@@ -1,4 +1,4 @@
-package org.kong;
+package org.kong.storage;
 
 import java.io.File;
 import java.io.FileOutputStream;

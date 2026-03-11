@@ -1,5 +1,7 @@
 package org.kong;
 
+import org.kong.storage.Partition;
+
 import java.util.ArrayList;
 import java.util.List;
 

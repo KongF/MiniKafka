@@ -1,5 +1,4 @@
-package org.kong;
-
+package org.kong.storage;
 
 public class Partition {
 
@@ -22,3 +21,4 @@ public class Partition {
     }
 
 }
+
