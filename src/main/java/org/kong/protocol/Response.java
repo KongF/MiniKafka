@@ -10,6 +10,10 @@ public class Response implements Serializable {
 
     private byte[] body;
 
+    private long offset;
+
+    public Response(){}
+
     public Response(boolean success, String message) {
         this.success = success;
         this.message = message;
@@ -20,9 +24,10 @@ public class Response implements Serializable {
         this.body = body;
     }
 
-    public Response(byte[] body) {
+    public Response(byte[] body, long offset) {
         this.success = true;
         this.body = body;
+        this.offset = offset;
     }
 
     public boolean isSuccess() {

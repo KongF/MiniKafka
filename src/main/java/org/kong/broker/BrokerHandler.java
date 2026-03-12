@@ -19,30 +19,36 @@ public class BrokerHandler extends SimpleChannelInboundHandler<String> {
 
         if("SEND".equals(request.getType())){
             handleSend(ctx,request);
-        }else if ("PULL".equals(request.getType())){
-            handlePull(ctx,request);
+        }else if ("FETCH".equals(request.getType())) {
+            handleFetch(ctx, request);
         }
     }
 
-    private void handlePull(ChannelHandlerContext ctx, Request request) throws Exception {
-        // 获取主题和分区
-        Topic topic = topicManager.getTopic(request.getTopic());
-        int partitionIndex = Math.abs(request.getKey().hashCode()) % topic.getPartitions().size();
-        Partition partition = topic.getPartitions().get(partitionIndex);
-        
-        // 从指定偏移量读取消息
-        String path = "data/" + request.getTopic() + "-" + partition.getPartitionId() + ".log";
-        LogReader logReader = new LogReader(path);
-        String message = logReader.read(request.getOffset());
-        
-        // 返回消息内容
-        if (message != null) {
-            Response response = new Response(message.getBytes());
+    private void handleFetch(ChannelHandlerContext ctx, Request request) throws Exception {
+
+        Topic topic = BrokerContext.TOPIC_MANAGER.getTopic(request.getTopic());
+
+        if (topic == null) {
+            Response response = new Response(false, "topic not exist");
             ctx.writeAndFlush(mapper.writeValueAsString(response) + "\n");
-        } else {
-            Response response = new Response(false, "No message found at offset " + request.getOffset());
-            ctx.writeAndFlush(mapper.writeValueAsString(response) + "\n");
+            return;
         }
+
+        Partition partition = topic.getPartitions().get(request.getPartition());
+
+        byte[] data = partition.fetch(request.getOffset());
+
+        if (data == null) {
+
+            Response response = new Response(false, "no message");
+            ctx.writeAndFlush(mapper.writeValueAsString(response) + "\n");
+
+            return;
+        }
+
+        Response response = new Response(data, request.getOffset());
+
+        ctx.writeAndFlush(mapper.writeValueAsString(response) + "\n");
     }
 
     private void handleSend(ChannelHandlerContext ctx, Request request) throws Exception {

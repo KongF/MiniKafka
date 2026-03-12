@@ -8,6 +8,8 @@ public class Request implements Serializable {
 
     private String topic;
 
+    private int partition;
+
     private String key;
 
     private byte[] body;
@@ -52,5 +54,13 @@ public class Request implements Serializable {
 
     public void setOffset(long offset) {
         this.offset = offset;
+    }
+
+    public int getPartition() {
+        return partition;
+    }
+
+    public void setPartition(int partition) {
+        this.partition = partition;
     }
 }

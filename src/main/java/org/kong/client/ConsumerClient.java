@@ -15,9 +15,12 @@ public class ConsumerClient {
     private final ObjectMapper mapper = new ObjectMapper();
 
     private long offset = 0;
+    private String topic;
+    private int partition;
 
-    public ConsumerClient(String host, int port) throws Exception {
-
+    public ConsumerClient(String host, int port, String topic, int partition) throws Exception {
+        this.topic = topic;
+        this.partition = partition;
         EventLoopGroup group = new NioEventLoopGroup();
 
         Bootstrap bootstrap = new Bootstrap();
@@ -26,23 +29,24 @@ public class ConsumerClient {
                 .channel(NioSocketChannel.class)
                 .handler(new ClientInitializer());
 
-        channel =
-                bootstrap.connect(host, port).sync().channel();
+        channel = bootstrap.connect(host, port).sync().channel();
 
     }
 
-    public void poll(String topic) throws Exception {
+    public void poll() throws Exception {
 
         Request request = new Request();
-
-        request.setType("PULL");
-
+        request.setType("FETCH");
         request.setTopic(topic);
-
+        request.setPartition(partition);
         request.setOffset(offset);
 
-        channel.writeAndFlush(mapper.writeValueAsString(request) + "\n");
+        String json = mapper.writeValueAsString(request);
 
+        channel.writeAndFlush(json + "\n");
+    }
+    public void nextOffset(long offset){
+        this.offset = offset;
     }
 
 }

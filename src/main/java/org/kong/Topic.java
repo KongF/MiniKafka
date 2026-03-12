@@ -18,7 +18,7 @@ public class Topic {
         this.partitions = new ArrayList<>();
 
         for (int i = 0; i < partitionCount; i++) {
-            partitions.add(new Partition(i,name));
+            partitions.add(new Partition(name,i));
         }
     }
 
