@@ -17,7 +17,6 @@ public class ConsumerTest {
         while (true) {
             consumer.poll();
             Thread.sleep(1000);
-
         }
     }
 }

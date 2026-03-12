@@ -48,5 +48,17 @@ public class ConsumerClient {
     public void nextOffset(long offset){
         this.offset = offset;
     }
+    public void joinGroup(String groupId,
+                          String consumerId,
+                          String topic) throws Exception {
+
+        Request request = new Request();
+        request.setType("JOIN_GROUP");
+        request.setGroupId(groupId);
+        request.setConsumerId(consumerId);
+        request.setTopic(topic);
+
+        channel.writeAndFlush(mapper.writeValueAsString(request) + "\n");
+    }
 
 }

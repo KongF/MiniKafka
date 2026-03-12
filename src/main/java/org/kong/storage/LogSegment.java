@@ -2,6 +2,7 @@ package org.kong.storage;
 
 import java.io.File;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
 
 /**
  * 日志段类，用于管理单个日志文件的存储操作
@@ -101,7 +102,12 @@ public class LogSegment {
 
         return data;
     }
-
+    public int positionForOffset(long offset) {
+        return index.lookup((int) offset);
+    }
+    public FileChannel getFileChannel() {
+        return raf.getChannel();
+    }
     /**
      * 获取日志段的基础偏移量
      * @return 基础偏移量

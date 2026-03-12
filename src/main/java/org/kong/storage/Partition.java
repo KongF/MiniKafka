@@ -1,6 +1,7 @@
 package org.kong.storage;
 
 import java.io.File;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -101,18 +102,21 @@ public class Partition {
     public int getPartitionId() {
         return partitionId;
     }
-    public byte[] fetch(long offset) throws Exception {
+
+    public FetchResult fetch(long offset) throws Exception {
 
         for (LogSegment segment : segments) {
-
             long base = segment.getBaseOffset();
-
             long end = base + segment.size();
 
             if (offset >= base && offset < end) {
+                int position = segment.positionForOffset(offset);
+                segment.getFileChannel().position(position);
+                int length = segment.getFileChannel()
+                        .map(FileChannel.MapMode.READ_ONLY, position, 4)
+                        .getInt();
 
-                return segment.read(offset);
-
+                return new FetchResult(segment.getFileChannel(), position + 4, length);
             }
 
         }

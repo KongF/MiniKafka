@@ -1,6 +1,6 @@
 package org.kong;
 
-import org.kong.broker.BrokerContext;
+import org.kong.context.BrokerContext;
 import org.kong.broker.BrokerServer;
 
 public class BrokerMain {

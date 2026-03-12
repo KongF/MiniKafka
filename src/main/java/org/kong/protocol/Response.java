@@ -1,6 +1,10 @@
 package org.kong.protocol;
 
+import org.kong.broker.group.GroupMember;
+
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
 public class Response implements Serializable {
 
@@ -11,6 +15,10 @@ public class Response implements Serializable {
     private byte[] body;
 
     private long offset;
+
+    private List<Integer> partitions;
+    private boolean leader;
+    private Map<String, GroupMember> members;
 
     public Response(){}
 
@@ -52,5 +60,29 @@ public class Response implements Serializable {
 
     public void setBody(byte[] body) {
         this.body = body;
+    }
+
+    public List<Integer> getPartitions() {
+        return partitions;
+    }
+
+    public void setPartitions(List<Integer> partitions) {
+        this.partitions = partitions;
+    }
+
+    public void setLeader(boolean leader) {
+        this.leader = leader;
+    }
+
+    public boolean isLeader() {
+        return leader;
+    }
+
+    public void setMembers(Map<String, GroupMember> members) {
+        this.members = members;
+    }
+
+    public Map<String, GroupMember> getMembers() {
+        return members;
     }
 }
