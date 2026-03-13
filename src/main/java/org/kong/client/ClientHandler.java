@@ -10,16 +10,14 @@ public class ClientHandler extends SimpleChannelInboundHandler<String> {
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-
         Response response = mapper.readValue(msg, Response.class);
 
         if (response.getBody() != null) {
             String message = new String(response.getBody());
-            System.out.println("consume: " + message+"/////"+response.toString());
+            System.out.println("consume: " + message);
         } else {
             System.out.println(response.getMessage());
         }
-
     }
 
 }

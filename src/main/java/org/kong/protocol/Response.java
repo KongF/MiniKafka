@@ -19,6 +19,7 @@ public class Response implements Serializable {
     private List<Integer> partitions;
     private boolean leader;
     private Map<String, GroupMember> members;
+    private int generationId;
 
     public Response(){}
 
@@ -84,5 +85,13 @@ public class Response implements Serializable {
 
     public Map<String, GroupMember> getMembers() {
         return members;
+    }
+
+    public void setGenerationId(int generationId) {
+        this.generationId = generationId;
+    }
+
+    public int getGenerationId() {
+        return generationId;
     }
 }

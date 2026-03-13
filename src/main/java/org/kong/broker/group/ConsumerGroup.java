@@ -14,11 +14,14 @@ public class ConsumerGroup {
     /** 消费者组成员集合 */
     private final Map<String,GroupMember> members = new HashMap();
 
+    private GroupState state = GroupState.PREPARING_REBALANCE;
+
+    private int generationId = 0;
     /** 分区分配结果，映射每个消费者到其负责的分区列表 */
     private final Map<String, List<Integer>> assignment = new HashMap<>();
 
     /** 当前消费者组的领导者，用于处理元数据同步请求 */
-    private String leader;
+    private String leaderId;
 
     /**
      * 构造消费者组对象
@@ -37,10 +40,16 @@ public class ConsumerGroup {
 
             members.put(consumerId, new GroupMember(consumerId));
 
-            if (leader == null) {
-                leader = consumerId;
+            if (leaderId == null) {
+                leaderId = consumerId;
             }
+
+            triggerRebalence();
         }
+    }
+    public synchronized void removeMember(String consumerId) {
+        members.remove(consumerId);
+        triggerRebalence();
     }
     public synchronized void heartbeat(String consumerId) {
 
@@ -50,8 +59,29 @@ public class ConsumerGroup {
             member.heartbeat();
         }
     }
+    private void triggerRebalence() {
+        state = GroupState.PREPARING_REBALANCE;
+        generationId++;
+        assignment.clear();
+    }
+    public synchronized void completeRebalance(Map<String, List<Integer>> newAssignment) {
+        assignment.clear();
+        assignment.putAll(newAssignment);
+        state = GroupState.STABLE;
+    }
     public synchronized boolean isLeader(String consumerId) {
-        return consumerId.equals(leader);
+        return consumerId.equals(leaderId);
+    }
+
+    public int generationId(){
+        return generationId;
+    }
+    public GroupState state(){
+        return state;
+    }
+
+    public Set<String> members(){
+        return members.keySet();
     }
 
     /**
@@ -60,33 +90,33 @@ public class ConsumerGroup {
      * @param partitionCount 分区总数
      * @return 分区分配结果，键为消费者 ID，值为该消费者分配的分区列表
      */
-    public synchronized Map<String, List<Integer>> rebalance(int partitionCount) {
-
-        // 创建排序后的消费者列表，确保分配结果的一致性
-        List<String> consumers = new ArrayList<>(members.keySet());
-
-        Collections.sort(consumers);
-
-        // 初始化结果映射，为每个消费者创建空的分区列表
-        Map<String, List<Integer>> result = new HashMap<>();
-
-        for (String c : consumers) {
-            result.put(c, new ArrayList<>());
-        }
-
-        // 使用轮询算法分配所有分区
-        for (int i = 0; i < partitionCount; i++) {
-
-            // 计算当前分区应该分配给的消费者索引
-            String consumer = consumers.get(i % consumers.size());
-            result.get(consumer).add(i);
-        }
-        // 更新内部的分区分配结果
-        assignment.clear();
-        assignment.putAll(result);
-
-        return assignment;
-    }
+//    public synchronized Map<String, List<Integer>> rebalance(int partitionCount) {
+//
+//        // 创建排序后的消费者列表，确保分配结果的一致性
+//        List<String> consumers = new ArrayList<>(members.keySet());
+//
+//        Collections.sort(consumers);
+//
+//        // 初始化结果映射，为每个消费者创建空的分区列表
+//        Map<String, List<Integer>> result = new HashMap<>();
+//
+//        for (String c : consumers) {
+//            result.put(c, new ArrayList<>());
+//        }
+//
+//        // 使用轮询算法分配所有分区
+//        for (int i = 0; i < partitionCount; i++) {
+//
+//            // 计算当前分区应该分配给的消费者索引
+//            String consumer = consumers.get(i % consumers.size());
+//            result.get(consumer).add(i);
+//        }
+//        // 更新内部的分区分配结果
+//        assignment.clear();
+//        assignment.putAll(result);
+//
+//        return assignment;
+//    }
 
     /**
      * 获取指定消费者分配的分区列表

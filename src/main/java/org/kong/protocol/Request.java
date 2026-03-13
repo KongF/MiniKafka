@@ -35,6 +35,7 @@ public class Request implements Serializable {
     
     /** 消息偏移量，用于指定或返回消息的位置 */
     private long offset;
+    private int generationId;
 
     public String getType() {
         return type;
@@ -106,5 +107,13 @@ public class Request implements Serializable {
 
     public Map<String, List<Integer>> getAssignment() {
         return assignment;
+    }
+
+    public int getGenerationId() {
+        return generationId;
+    }
+
+    public void setGenerationId(int generationId) {
+        this.generationId = generationId;
     }
 }
