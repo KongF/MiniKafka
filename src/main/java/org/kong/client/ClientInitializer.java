@@ -6,6 +6,8 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
+import org.kong.protocol.RequestEncoder;
+import org.kong.protocol.ResponseDecoder;
 
 public class ClientInitializer extends ChannelInitializer<SocketChannel> {
 
@@ -17,11 +19,10 @@ public class ClientInitializer extends ChannelInitializer<SocketChannel> {
         // 按换行符拆包
         pipeline.addLast(new LineBasedFrameDecoder(1024));
 
-        // String 解码
-        pipeline.addLast(new StringDecoder());
+        pipeline.addLast(new RequestEncoder());
 
-        // String 编码
-        pipeline.addLast(new StringEncoder());
+        pipeline.addLast(new ResponseDecoder());
+
 
         // 客户端响应处理
         pipeline.addLast(new ClientHandler());

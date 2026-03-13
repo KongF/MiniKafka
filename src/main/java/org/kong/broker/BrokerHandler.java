@@ -1,18 +1,23 @@
 package org.kong.broker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
 import org.kong.Topic;
 import org.kong.TopicManager;
 import org.kong.broker.group.ConsumerGroup;
+import org.kong.broker.group.GroupMember;
 import org.kong.context.BrokerContext;
+import org.kong.protocol.ApiKeys;
+import org.kong.protocol.OldRequest;
 import org.kong.protocol.Request;
 import org.kong.protocol.Response;
 import org.kong.storage.FetchResult;
 import org.kong.storage.Partition;
 
+import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 import java.util.List;
@@ -25,19 +30,35 @@ public class BrokerHandler extends SimpleChannelInboundHandler<String> {
     protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
         Request request = mapper.readValue(msg, Request.class);
 
-        if("SEND".equals(request.getType())){
-            handleSend(ctx,request);
-        }else if ("FETCH".equals(request.getType())) {
-            handleFetch(ctx, request);
-        } else if ("JOIN_GROUP".equals(request.getType())) {
-            handleJoinGroup(ctx, request);
-        }else if("SYNC_GROUP".equals(request.getType())){
-            handleSyncGroup(ctx, request);
-        } else if ("HEARTBEAT".equals(request.getType())) {
-            handleHeartbeat(ctx, request);
-        }else if ("OFFSET_COMMIT".equals(request.getType())) {
-            handleCommit(ctx, request);
+        switch (request.apiKey()) {
+            case ApiKeys.PRODUCE:
+                handleProduce(ctx, request);
+                break;
+            case ApiKeys.FETCH:
+                handleFetch(ctx, request);
+                break;
+            case ApiKeys.JOIN_GROUP:
+                handleJoinGroup(ctx, request);
+                break;
+            case ApiKeys.SYNC_GROUP:
+                handleSyncGroup(ctx, request);
+                break;
+            case ApiKeys.HEARTBEAT:
+                handleHeartbeat(ctx, request);
+                break;
+            case ApiKeys.OFFSET_COMMIT:
+                handleCommit(ctx, request);
+                break;
         }
+    }
+    private void handleProduce(
+            ChannelHandlerContext ctx,
+            Request request) throws Exception {
+        Topic topic = BrokerContext.TOPIC_MANAGER.getTopic(request.topic());
+        Partition partition = topic.getPartitions().get(request.partition());
+        long offset = partition.append(request.body());
+        Response response = new Response(("offset=" + offset).getBytes());
+        ctx.writeAndFlush(response);
     }
 
     /**
@@ -54,40 +75,39 @@ public class BrokerHandler extends SimpleChannelInboundHandler<String> {
     private void handleFetch(ChannelHandlerContext ctx, Request request) throws Exception {
 
         // 获取请求的 Topic 对象
-        Topic topic = BrokerContext.TOPIC_MANAGER.getTopic(request.getTopic());
-
-        // 检查 Topic 是否存在，不存在则返回错误响应
+        Topic topic = BrokerContext.TOPIC_MANAGER.getTopic(request.topic());
         if (topic == null) {
-            Response response = new Response(false, "topic not exist");
-            ctx.writeAndFlush(mapper.writeValueAsString(response) + "\n");
+            ctx.writeAndFlush(new Response("topic not exist".getBytes()));
             return;
         }
 
         // 获取指定分区的 Partition 对象
-        Partition partition = topic.getPartitions().get(request.getPartition());
-
-        // 从分区中拉取指定偏移量的消息数据
-        FetchResult result = partition.fetch(request.getOffset());
-
-        // 检查是否成功获取到消息，未获取到则返回无消息响应
-        if (result == null) {
-            Response response = new Response(false, "no message");
-            ctx.writeAndFlush(mapper.writeValueAsString(response) + "\n");
-
+        Partition partition = topic.getPartitions().get(request.partition());
+        if (partition == null) {
+            ctx.writeAndFlush(new Response("partition not exist".getBytes()));
             return;
         }
-        FileChannel fileChannel = result.getChannel();
-        long position = result.getPosition();
-        long length = result.getLength();
 
+        // 从分区中拉取指定偏移量的消息数据
+        FetchResult result = partition.fetch(request.offset());
+        if (result == null) {
+            ctx.writeAndFlush(new Response(new byte[0]));
+            return;
+        }
+
+        long length = result.getLength();
+        ByteBuf header = ctx.alloc().buffer(4);
+        header.writeInt((int) length);
+        ctx.write(header);
         // 使用 Zero Copy 技术将消息数据直接从文件通道传输到网络通道，避免用户态和内核态之间的数据拷贝
-        ctx.writeAndFlush(
+        ctx.write(
                 new DefaultFileRegion(
-                        fileChannel,
-                        position,
+                        result.getChannel(),
+                        result.getPosition(),
                         length
                 )
         );
+        ctx.flush();
 
     }
 
@@ -104,25 +124,25 @@ public class BrokerHandler extends SimpleChannelInboundHandler<String> {
      */
     private void handleSend(ChannelHandlerContext ctx, Request request) throws Exception {
         // 获取请求的 Topic 对象
-        Topic topic = topicManager.getTopic(request.getTopic());
+        Topic topic = topicManager.getTopic(request.topic());
         // 检查 Topic 是否存在，不存在则返回错误响应
         if(topic == null){
-            Response response = new Response(false,"Topic not found");
-            ctx.writeAndFlush(mapper.writeValueAsString(response)+"\n");
+            Response response = new Response("Topic not found".getBytes());
+            ctx.writeAndFlush(response);
             return;
         }
 
         // 根据消息 Key 的哈希值计算分区索引，确保相同 Key 的消息总是发送到同一分区
-        int partitionIndex = Math.abs(request.getKey().hashCode()) % topic.getPartitions().size();
+        int partitionIndex = Math.abs(request.key().hashCode()) % topic.getPartitions().size();
 
         // 获取目标分区的 Partition 对象
         Partition partition = topic.getPartitions().get(partitionIndex);
 
         // 将消息追加到分区中，并返回消息的偏移量
-        long offset = partition.append(request.getBody());
+        long offset = partition.append(request.body());
 
         // 构建成功响应，包含消息偏移量和消息体
-        Response response = new Response(true,"offset: "+offset,request.getBody());
+        Response response = new Response(request.body().toString().getBytes());
         ctx.writeAndFlush(mapper.writeValueAsString(response)+"\n");
     }
     /**
@@ -137,11 +157,14 @@ public class BrokerHandler extends SimpleChannelInboundHandler<String> {
      */
     private void handleJoinGroup(ChannelHandlerContext ctx, Request request) throws Exception {
         // 调用组协调器将消费者加入指定消费组
-        ConsumerGroup group = BrokerContext.GROUP_COORDINATOR.joinGroup(request.getGroupId(), request.getConsumerId());
+        ConsumerGroup group = BrokerContext.GROUP_COORDINATOR.joinGroup(request.getGroupId(), request.getMemberId());
         // 判断当前消费者是否为消费组的 Leader
-        boolean leader = group.isLeader(request.getConsumerId());
+        boolean leader = group.isLeader(request.getMemberId());
+        int generationId = group.generationId();
+        Map<String, GroupMember> members = group.getMembers();
+        byte[] bytes = new byte[8+ members.size()];
+
         Response response = new Response();
-        response.setSuccess(true);
 
         // 设置响应信息，包括 Leader 标识和所有成员列表
         response.setLeader(leader);

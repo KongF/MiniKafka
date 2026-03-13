@@ -124,4 +124,8 @@ public class LogSegment {
         return writePosition;
     }
 
+    public boolean isFull() {
+        //todo ddd
+        return writePosition >= 1024 * 1024 * 1024;
+    }
 }

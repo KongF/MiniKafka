@@ -6,7 +6,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.kong.protocol.Request;
+import org.kong.protocol.OldRequest;
 
 
 public class ProducerClient {
@@ -32,7 +32,7 @@ public class ProducerClient {
     public void send(String topic, String key, String msg)
             throws Exception {
 
-        Request request = new Request();
+        OldRequest request = new OldRequest();
 
         request.setType("SEND");
 

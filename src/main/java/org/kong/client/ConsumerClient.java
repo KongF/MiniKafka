@@ -6,7 +6,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import org.kong.protocol.Request;
+import org.kong.protocol.OldRequest;
 
 public class ConsumerClient {
 
@@ -35,7 +35,7 @@ public class ConsumerClient {
 
     public void poll() throws Exception {
 
-        Request request = new Request();
+        OldRequest request = new OldRequest();
         request.setType("FETCH");
         request.setTopic(topic);
         request.setPartition(partition);
@@ -52,7 +52,7 @@ public class ConsumerClient {
                           String consumerId,
                           String topic) throws Exception {
 
-        Request request = new Request();
+        OldRequest request = new OldRequest();
         request.setType("JOIN_GROUP");
         request.setGroupId(groupId);
         request.setConsumerId(consumerId);

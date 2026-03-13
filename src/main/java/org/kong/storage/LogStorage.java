@@ -28,11 +28,8 @@ public class LogStorage {
         long currentOffset = offset.get();
 
         try (FileOutputStream fos = new FileOutputStream(file, true)) {
-
             fos.write(data);
-
             fos.write('\n');
-
         }
 
         offset.addAndGet(data.length + 1);

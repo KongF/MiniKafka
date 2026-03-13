@@ -100,23 +100,16 @@ public class OffsetIndex {
      * @return 对应的物理位置，如果未找到则返回 0
      */
     public int lookup(int targetOffset) {
-
         int low = 0;
-
         int high = entries.size() - 1;
-
         // 二分查找
         while (low <= high) {
-
             int mid = (low + high) / 2;
-
             IndexEntry entry = entries.get(mid);
-
             // 找到精确匹配
             if (entry.offset == targetOffset) {
                 return entry.position;
             }
-
             // 调整查找范围
             if (entry.offset < targetOffset) {
                 low = mid + 1;
