@@ -1,5 +1,6 @@
 package org.kong.storage.log;
 
+import org.kong.common.MessageBatch;
 import org.kong.storage.LogSegment;
 
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ public class Log {
 
     private LogSegment activeSegment;
 
-    public Log(String topic, int partition) {
+    public Log(String topic, int partition) throws Exception {
         this.topic = topic;
         this.partition = partition;
         this.activeSegment = new LogSegment(0);
@@ -34,10 +35,21 @@ public class Log {
         return offset;
     }
 
-    private void rollSegment() {
+    private void rollSegment() throws Exception {
         long baseOffset = activeSegment.nextOffset();
         activeSegment = new LogSegment(baseOffset);
         segments.add(activeSegment);
+    }
+    public synchronized long appendBatch(MessageBatch batch) throws Exception {
+
+        long baseOffset = activeSegment.nextOffset();
+
+        for (byte[] msg : batch.messages()) {
+
+            activeSegment.append(msg);
+        }
+
+        return baseOffset;
     }
 
 }

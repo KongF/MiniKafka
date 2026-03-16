@@ -16,6 +16,7 @@ import org.kong.protocol.Request;
 import org.kong.protocol.Response;
 import org.kong.storage.FetchResult;
 import org.kong.storage.Partition;
+import org.kong.storage.log.Log;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -54,9 +55,12 @@ public class BrokerHandler extends SimpleChannelInboundHandler<String> {
     private void handleProduce(
             ChannelHandlerContext ctx,
             Request request) throws Exception {
-        Topic topic = BrokerContext.TOPIC_MANAGER.getTopic(request.topic());
-        Partition partition = topic.getPartitions().get(request.partition());
-        long offset = partition.append(request.body());
+        //Topic topic = BrokerContext.TOPIC_MANAGER.getTopic(request.topic());
+        //Partition partition = topic.getPartitions().get(request.partition());
+        Log log = BrokerContext.LOG_MANAGER.getOrCreateLog(request.topic(), request.partition());
+
+        long offset = log.append(request.body());
+
         Response response = new Response(("offset=" + offset).getBytes());
         ctx.writeAndFlush(response);
     }

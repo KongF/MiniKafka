@@ -3,6 +3,7 @@ package org.kong.context;
 import org.kong.TopicManager;
 import org.kong.broker.group.GroupCoordinator;
 import org.kong.broker.group.OffsetManager;
+import org.kong.storage.log.LogManager;
 
 /**
  * Broker 上下文类，提供全局单例的管理组件
@@ -18,5 +19,7 @@ public class BrokerContext {
     
     /** 偏移量管理器实例，负责消费偏移量的提交和查询 */
     public static final OffsetManager OFFSET_MANAGER = new OffsetManager();
+
+    public static final LogManager LOG_MANAGER = new LogManager();
 
 }
